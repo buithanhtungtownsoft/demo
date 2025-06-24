@@ -19,7 +19,12 @@ public class SecurityConfig {
             "/auth/token/refresh",
             "/swagger-ui/**",
             "/swagger-ui/swagger-ui-bundle.js",
-            "/v3/api-docs/**"
+            "/v3/api-docs/**",
+            "/swagger-ui.html",
+            "webjars/swagger-ui/**",
+            "webjars/**",
+            "favicon.ico",
+            "/user/**"
     );
 
     @Bean

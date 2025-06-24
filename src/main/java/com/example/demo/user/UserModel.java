@@ -10,7 +10,7 @@ import org.springframework.data.relational.core.mapping.Table;
 public class UserModel {
 
     @Id
-    private UserId id;
+    private String id;
 
     @Column("user_name")
     private String userName;
