@@ -1,8 +1,10 @@
 package com.example.demo.config;
 
+import com.example.demo.auth.AuthWebFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,17 +25,17 @@ public class SecurityConfig {
             "/swagger-ui.html",
             "webjars/swagger-ui/**",
             "webjars/**",
-            "favicon.ico",
-            "/user/**"
+            "favicon.ico"
     );
 
     @Bean
-    public SecurityWebFilterChain securitygWebFilterChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain securitygWebFilterChain(ServerHttpSecurity http, AuthWebFilter authWebFilter) {
         return http
                 .csrf(csrf -> csrf.disable())
                 .authorizeExchange(ex -> ex
                         .pathMatchers(PERMIT_ALL_URLS.toArray(new String[0])).permitAll()
                         .anyExchange().authenticated())
+                .addFilterBefore(authWebFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 

@@ -12,6 +12,9 @@ public class UserModel {
     @Id
     private String id;
 
+    @Column("company_code")
+    private String companyCode;
+
     @Column("user_name")
     private String userName;
 
