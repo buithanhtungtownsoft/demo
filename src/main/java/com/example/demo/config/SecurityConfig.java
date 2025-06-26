@@ -32,6 +32,8 @@ public class SecurityConfig {
     public SecurityWebFilterChain securitygWebFilterChain(ServerHttpSecurity http, AuthWebFilter authWebFilter) {
         return http
                 .csrf(csrf -> csrf.disable())
+                .httpBasic(httpBasic -> httpBasic.disable())
+                .formLogin(form -> form.disable())
                 .authorizeExchange(ex -> ex
                         .pathMatchers(PERMIT_ALL_URLS.toArray(new String[0])).permitAll()
                         .anyExchange().authenticated())
