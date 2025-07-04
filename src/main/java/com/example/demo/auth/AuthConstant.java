@@ -13,7 +13,12 @@ public class AuthConstant {
             "/swagger-ui.html",
             "/webjars/swagger-ui/**",
             "/webjars/**",
-            "/favicon.ico"
+            "/favicon.ico",
+
+            "/chat",
+            "/chat/**",
+            "/ws/**",
+            "/socket.io/**"
     );
 
 }

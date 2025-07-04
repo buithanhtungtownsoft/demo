@@ -37,6 +37,11 @@ public class AuthWebFilter implements WebFilter {
         log.info("Processing filter for path={}, method={}, thread={}",
                 path, exchange.getRequest().getMethod(), Thread.currentThread().getName());
 
+        // Bỏ qua các path không cần xác thực
+        if (isPermitAllPath(path) || exchange.getRequest().getMethod() == HttpMethod.OPTIONS) {
+            return chain.filter(exchange);
+        }
+
         // Kiểm tra nếu filter đã được gọi
         if (Boolean.TRUE.equals(exchange.getAttribute("FILTER_ALREADY_CALLED"))) {
             log.warn("Filter re-invoked! path={}", path);
@@ -50,11 +55,6 @@ public class AuthWebFilter implements WebFilter {
             return chain.filter(exchange);
         }
         exchange.getAttributes().put("FILTER_ALREADY_CALLED", true);
-
-        // Bỏ qua các path không cần xác thực
-        if (isPermitAllPath(path) || exchange.getRequest().getMethod() == HttpMethod.OPTIONS) {
-            return chain.filter(exchange);
-        }
 
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         exchange.getResponse().getHeaders().set(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
