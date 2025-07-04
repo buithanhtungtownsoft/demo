@@ -32,9 +32,12 @@ public class ChatWebSocketHandler implements WebSocketHandler {
     public Mono<Void> handle(WebSocketSession session) {
         log.info("New WebSocket connection: {}", session.getId());
 
-        // Sinks để lưu companyCode
+        // Sinks để lưu companyCode và sender
         Sinks.Many<String> companyCodeSink = Sinks.many().multicast().onBackpressureBuffer();
-        Flux<String> companyCodeFlux = companyCodeSink.asFlux().cache(1);
+        Flux<String> companyCodeFlux = companyCodeSink.asFlux().take(1).cache(); // Chỉ lấy companyCode đầu tiên
+
+        Sinks.Many<String> senderSink = Sinks.many().multicast().onBackpressureBuffer();
+        Flux<String> senderFlux = senderSink.asFlux().take(1).cache(); // Chỉ lấy sender đầu tiên
 
         // Xử lý tin nhắn nhận được
         Flux<ChatMessage> incoming = session.receive()
@@ -47,13 +50,14 @@ public class ChatWebSocketHandler implements WebSocketHandler {
                             log.warn("Invalid message: sender or companyCode missing");
                             return Mono.empty();
                         }
-                        // Phát companyCode cho luồng outgoing
+                        // Phát companyCode và sender cho các luồng
                         companyCodeSink.tryEmitNext(message.getCompanyCode());
+                        senderSink.tryEmitNext(message.getSender());
                         message.setTimestamp(System.currentTimeMillis());
                         // Lưu tin nhắn vào database
                         return chatMessageRepository.save(message)
                                 .doOnSuccess(saved -> {
-                                    log.info("Saved message: {}", saved.getContent());
+                                    log.info("Saved message: {} from {}", saved.getContent(), saved.getSender());
                                     // Phát tin nhắn tới Sinks của companyCode
                                     Sinks.Many<ChatMessage> sink = companySinks.computeIfAbsent(
                                             message.getCompanyCode(),
@@ -63,6 +67,8 @@ public class ChatWebSocketHandler implements WebSocketHandler {
                                             }
                                     );
                                     sink.tryEmitNext(saved);
+                                    log.info("Emitted message to sink for companyCode: {}, sender: {}",
+                                            message.getCompanyCode(), saved.getSender());
                                 });
                     } catch (Exception e) {
                         log.error("Error parsing message: {}", e.getMessage());
@@ -72,10 +78,10 @@ public class ChatWebSocketHandler implements WebSocketHandler {
                 .doOnError(e -> log.error("Error in incoming stream: {}", e.getMessage()))
                 .onErrorContinue((e, obj) -> log.warn("Skipping invalid message: {}", e.getMessage()));
 
-        // Gửi tin nhắn mới trong cùng companyCode
+        // Gửi tin nhắn mới từ các client khác trong cùng companyCode
         Flux<WebSocketMessage> outgoing = companyCodeFlux
-                .flatMap(companyCode -> {
-                    // Lấy Sinks cho companyCode, tạo mới nếu chưa có
+                .flatMap(companyCode -> senderFlux.flatMap(sender -> {
+                    // Lấy Sinks cho companyCode
                     Sinks.Many<ChatMessage> sink = companySinks.computeIfAbsent(
                             companyCode,
                             k -> {
@@ -83,11 +89,20 @@ public class ChatWebSocketHandler implements WebSocketHandler {
                                 return Sinks.many().multicast().onBackpressureBuffer();
                             }
                     );
-                    return sink.asFlux();
-                })
+                    // Lọc tin nhắn để không gửi lại tin nhắn của chính client
+                    return sink.asFlux()
+                            .filter(message -> {
+                                boolean shouldSend = !message.getSender().equals(sender);
+                                log.info("Filtering message from {} for sender {}: shouldSend={}",
+                                        message.getSender(), sender, shouldSend);
+                                return shouldSend;
+                            });
+                }))
                 .map(message -> {
                     try {
-                        return objectMapper.writeValueAsString(message);
+                        String serialized = objectMapper.writeValueAsString(message);
+                        log.info("Sending message to client: {}", serialized);
+                        return serialized;
                     } catch (Exception e) {
                         log.error("Error serializing message: {}", e.getMessage());
                         return "";
@@ -104,6 +119,7 @@ public class ChatWebSocketHandler implements WebSocketHandler {
                 .doOnTerminate(() -> {
                     log.info("WebSocket session terminated: {}", session.getId());
                     companyCodeSink.tryEmitComplete();
+                    senderSink.tryEmitComplete();
                     // Dọn dẹp Sinks nếu không còn client
                     companyCodeFlux.subscribe(companyCode -> {
                         Sinks.Many<ChatMessage> sink = companySinks.get(companyCode);
