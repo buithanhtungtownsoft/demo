@@ -2,6 +2,8 @@ package com.example.demo.config;
 
 import com.example.demo.auth.AuthConstant;
 import com.example.demo.auth.AuthWebFilter;
+import com.example.demo.auth.JwtUtil;
+import com.example.demo.user.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
@@ -14,6 +16,11 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @Configuration
 @EnableReactiveMethodSecurity
 public class SecurityConfig {
+
+    @Bean
+    public AuthWebFilter authWebFilter(UserRepository userRepository, JwtUtil jwtUtil) {
+        return new AuthWebFilter(jwtUtil, userRepository);
+    }
 
     @Bean
     public SecurityWebFilterChain securitygWebFilterChain(ServerHttpSecurity http, AuthWebFilter authWebFilter) {
