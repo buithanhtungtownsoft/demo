@@ -98,6 +98,12 @@ public class RoomChatWebSocketHandler implements WebSocketHandler {
 
         // Send messages to clients in the same room
         Flux<WebSocketMessage> outgoing = roomIdFlux
+                .doOnNext(roomId -> {
+                    roomSinks.computeIfAbsent(roomId, k -> {
+                        log.info("Created new sink for roomId: {} (from outgoing stream)", k);
+                        return Sinks.many().multicast().onBackpressureBuffer();
+                    });
+                })
                 .flatMap(roomId -> senderFlux.flatMap(sender -> {
                     Sinks.Many<RoomMessage> sink = roomSinks.get(roomId);
                     if (sink == null) {
