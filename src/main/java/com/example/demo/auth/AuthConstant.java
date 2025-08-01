@@ -18,6 +18,8 @@ public class AuthConstant {
             "/chat",
             "/chat/**",
             "/room/**",
+            "/global",
+            "/global/**",
             "/ws/**",
             "/socket.io/**"
     );

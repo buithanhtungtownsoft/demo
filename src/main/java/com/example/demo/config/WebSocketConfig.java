@@ -1,6 +1,7 @@
 package com.example.demo.config;
 
 import com.example.demo.websocket.ChatWebSocketHandler;
+import com.example.demo.websocket.GlobalChatWebSocketHandler;
 import com.example.demo.websocket.RoomChatWebSocketHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,10 +23,15 @@ public class WebSocketConfig {
     }
 
     @Bean
-    public HandlerMapping webSocketHandlerMapping(ChatWebSocketHandler chatWebSocketHandler, RoomChatWebSocketHandler roomChatWebSocketHandler) {
+    public HandlerMapping webSocketHandlerMapping(
+            ChatWebSocketHandler chatWebSocketHandler,
+            RoomChatWebSocketHandler roomChatWebSocketHandler,
+            GlobalChatWebSocketHandler globalChatWebSocketHandler
+    ) {
         Map<String, WebSocketHandler> urlMap = new HashMap<>();
         urlMap.put("/chat", chatWebSocketHandler);
         urlMap.put("/room", roomChatWebSocketHandler);
+        urlMap.put("/global", globalChatWebSocketHandler);
 
         SimpleUrlHandlerMapping mapping = new SimpleUrlHandlerMapping();
         mapping.setUrlMap(urlMap);
